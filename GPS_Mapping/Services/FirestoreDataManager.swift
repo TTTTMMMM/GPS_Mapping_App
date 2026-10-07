@@ -117,15 +117,46 @@ struct GPSPoint: Identifiable {
     }
 }
 
+extension GPSPoint {
+    /// Straight-line distance to another point, in meters.
+    func distance(to other: GPSPoint) -> CLLocationDistance {
+        let from = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let to = CLLocation(latitude: other.coordinate.latitude, longitude: other.coordinate.longitude)
+        return from.distance(from: to)
+    }
+}
+
+/// Settings for ignoring GPS jitter when measuring a route.
+enum RouteFilter {
+    /// A point only counts as movement once it is at least this far from the last point that
+    /// counted. A GPS module sitting still (especially indoors) reports positions that wander
+    /// by roughly 5 to 30 m; this should be a little larger than that wander.
+    /// Raise it if a parked tracker still shows distance; lower it if real, slow walks come
+    /// out too short.
+    static let minimumMoveMeters: CLLocationDistance = 25
+}
+
 extension Array where Element == GPSPoint {
-    /// Total length of the route, in meters: the sum of the straight-line distances
-    /// between each point and the next, in the order the points are listed (time order).
+    /// Raw length of the route, in meters: the sum of the straight-line distances between each
+    /// point and the next, in time order. GPS jitter inflates this when the tracker is still.
     var totalDistanceMeters: CLLocationDistance {
-        zip(self, dropFirst()).reduce(0) { total, pair in
-            let from = CLLocation(latitude: pair.0.coordinate.latitude, longitude: pair.0.coordinate.longitude)
-            let to = CLLocation(latitude: pair.1.coordinate.latitude, longitude: pair.1.coordinate.longitude)
-            return total + from.distance(from: to)
+        zip(self, dropFirst()).reduce(0) { total, pair in total + pair.0.distance(to: pair.1) }
+    }
+
+    /// Length of the route in meters, ignoring jitter: a point is only counted once it is at
+    /// least `minimum` meters from the last point that was counted (the "anchor").
+    /// Points that stay inside that radius, like a tracker wandering on a desk, add nothing.
+    func distanceMeters(ignoringMovesUnder minimum: CLLocationDistance = RouteFilter.minimumMoveMeters) -> CLLocationDistance {
+        guard var anchor = first else { return 0 }
+        var total: CLLocationDistance = 0
+        for point in dropFirst() {
+            let moved = anchor.distance(to: point)
+            if moved >= minimum {
+                total += moved
+                anchor = point
+            }
         }
+        return total
     }
 }
 

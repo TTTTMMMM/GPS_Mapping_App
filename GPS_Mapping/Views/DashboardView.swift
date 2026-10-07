@@ -122,9 +122,16 @@ struct DashboardView: View {
                     .font(.custom("Josefin Sans", size: 13))
                     .foregroundStyle(.black.opacity(0.7))
 
-                Text(DistanceFormat.string(fromMeters: points.totalDistanceMeters))
+                Text(DistanceFormat.string(fromMeters: points.distanceMeters()))
                     .font(.custom("Josefin Sans", size: 34))
                     .foregroundStyle(Color.calendarDayBlue)
+
+                // Shown so you can see how much GPS jitter the filter removed
+                Text("Moves under \(DistanceFormat.string(fromMeters: RouteFilter.minimumMoveMeters)) ignored. Raw GPS path: \(DistanceFormat.string(fromMeters: points.totalDistanceMeters))")
+                    .font(.custom("Josefin Sans", size: 12))
+                    .foregroundStyle(.black.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
 
                 if let first = points.first?.time, let last = points.last?.time {
                     Text("\(first.formatted(date: .omitted, time: .shortened)) to \(last.formatted(date: .omitted, time: .shortened))")
