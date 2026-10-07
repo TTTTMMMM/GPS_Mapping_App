@@ -128,7 +128,7 @@ struct DashboardView: View {
 
                 // Shown so you can see how much GPS jitter the filter removed
                 Text("Moves under \(DistanceFormat.string(fromMeters: RouteFilter.minimumMoveMeters)) ignored. Raw GPS path: \(DistanceFormat.string(fromMeters: points.totalDistanceMeters))")
-                    .font(.custom("Josefin Sans", size: 12))
+                    .font(.custom("Josefin Sans", size: 15))
                     .foregroundStyle(.black.opacity(0.6))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)

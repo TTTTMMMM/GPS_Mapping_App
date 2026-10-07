@@ -133,7 +133,7 @@ enum RouteFilter {
     /// by roughly 5 to 30 m; this should be a little larger than that wander.
     /// Raise it if a parked tracker still shows distance; lower it if real, slow walks come
     /// out too short.
-    static let minimumMoveMeters: CLLocationDistance = 25
+    static let minimumMoveMeters: CLLocationDistance = 6
 }
 
 extension Array where Element == GPSPoint {
