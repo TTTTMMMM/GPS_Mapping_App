@@ -5,24 +5,24 @@ struct LoginView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            // Black so it's readable on the yellow background
-            Text("GPS Mapping")
+            // Black so it's readable on the light panel over the map image
+            Text("GPS Tracker")
                 .font(.custom("Josefin Sans", size: 40))
                 .foregroundStyle(.black)
 
             Button {
                 Task { await authManager.signInWithGoogle() }
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Text("G")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.blue)
                     Text("Sign in with Google")
-                        .font(.custom("Josefin Sans", size: 14))
+                        .font(.custom("Josefin Sans", size: 18))
                         .foregroundStyle(.black)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 11)
                 .background(Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay(
@@ -44,5 +44,10 @@ struct LoginView: View {
                     .padding(.horizontal)
             }
         }
+        // A panel in the same soft blue as the signed-in screens, so the text stays
+        // readable over the map image
+        .padding(.horizontal, 36)
+        .padding(.vertical, 28)
+        .background(Color.dashboardBackground, in: RoundedRectangle(cornerRadius: 16))
     }
 }

@@ -291,6 +291,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = GPS_Mapping.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = LH6GCK5747;
@@ -334,6 +335,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = GPS_Mapping.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = LH6GCK5747;
