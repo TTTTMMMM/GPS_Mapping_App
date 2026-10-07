@@ -1,0 +1,73 @@
+# ---------------------------------------------------------------
+# Sensitive files: never commit these
+# ---------------------------------------------------------------
+
+# Firebase config (contains the API key and project IDs).
+# The renamed copy this project actually uses:
+GPS_Mapping/GPS-Tracker-Pico2W.plist
+# ...and the default name Firebase gives the file when you download it:
+GoogleService-Info.plist
+**/GoogleService-Info.plist
+# Catch other renamed Firebase configs placed anywhere in the project:
+**/GPS-Tracker-Pico2W.plist
+
+# Android/other Firebase and cloud credentials, in case they ever get added
+google-services.json
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+
+# Generic secrets and signing material
+.env
+.env.*
+*.pem
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.certSigningRequest
+
+# ---------------------------------------------------------------
+# macOS
+# ---------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ---------------------------------------------------------------
+# Xcode
+# ---------------------------------------------------------------
+
+# Personal, per-user Xcode state (window layout, breakpoints, scheme order)
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# Build output
+build/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager build folders.
+# (Package.resolved under xcshareddata is intentionally NOT ignored,
+#  so everyone gets the same dependency versions.)
+.build/
+.swiftpm/
+
+# Playgrounds and previews
+timeline.xctimeline
+playground.xcworkspace
+
+# Fastlane / CocoaPods / Carthage, if they're ever adopted
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+Pods/
+Carthage/Build/
