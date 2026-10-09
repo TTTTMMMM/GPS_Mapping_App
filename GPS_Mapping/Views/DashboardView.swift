@@ -143,6 +143,11 @@ struct DashboardView: View {
             .padding(.vertical, 12)
             .background(Color.white.opacity(0.6))
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.calendarDayBlue, lineWidth: 1)
+            )
+            .shadow(color: Color.calendarDayBlue.opacity(0.25), radius: 4, x: 3, y: 3)
         }
     }
 
@@ -191,6 +196,11 @@ struct DashboardView: View {
                         .id(selectedDate) // reframe the camera whenever a new day is chosen
                         .frame(height: mapHeight)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.calendarDayBlue, lineWidth: 1)
+                        )
+                        .shadow(color: Color.calendarDayBlue.opacity(0.25), radius: 4, x: 3, y: 3)
                 }
             }
         } else {
