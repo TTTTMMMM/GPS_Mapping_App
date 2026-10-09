@@ -33,7 +33,7 @@ struct DashboardView: View {
                             .font(.custom("Josefin Sans", size: 20))
                         Text("Signed in as UID:\n\(authManager.user?.uid ?? "unknown")")
                             .font(.custom("Josefin Sans", size: 13))
-                            .foregroundStyle(.black.opacity(0.7))
+                            .foregroundStyle(.black)
                             .multilineTextAlignment(.center)
                             .textSelection(.enabled)
                         Button("Reload") {
@@ -55,7 +55,7 @@ struct DashboardView: View {
             .containerBackground(Color.dashboardBackground, for: .navigation)
 #endif
             // Black text for readability on the light background
-            .foregroundStyle(.black)
+            .foregroundStyle(Color.calendarDayBlue)
             .navigationTitle("GPS Tracker")
             .profileToolbar(authManager: authManager)
         }
@@ -102,7 +102,7 @@ struct DashboardView: View {
 
             Text("Filled-in days have GPS location data")
                 .font(.custom("Josefin Sans", size: 13))
-                .foregroundStyle(.black.opacity(0.7))
+                .foregroundStyle(.black)
 
             routeSummary
         }
@@ -120,7 +120,7 @@ struct DashboardView: View {
             VStack(spacing: 4) {
                 Text("Distance traveled")
                     .font(.custom("Josefin Sans", size: 13))
-                    .foregroundStyle(.black.opacity(0.7))
+                    .foregroundStyle(.black)
 
                 Text(DistanceFormat.string(fromMeters: points.distanceMeters()))
                     .font(.custom("Josefin Sans", size: 34))
@@ -129,14 +129,14 @@ struct DashboardView: View {
                 // Shown so you can see how much GPS jitter the filter removed
                 Text("Moves under \(DistanceFormat.string(fromMeters: RouteFilter.minimumMoveMeters)) ignored. Raw GPS path: \(DistanceFormat.string(fromMeters: points.totalDistanceMeters))")
                     .font(.custom("Josefin Sans", size: 15))
-                    .foregroundStyle(.black.opacity(0.6))
+                    .foregroundStyle(.black)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
 
                 if let first = points.first?.time, let last = points.last?.time {
                     Text("\(first.formatted(date: .omitted, time: .shortened)) to \(last.formatted(date: .omitted, time: .shortened))")
                         .font(.custom("Josefin Sans", size: 13))
-                        .foregroundStyle(.black.opacity(0.7))
+                        .foregroundStyle(.black)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -175,7 +175,7 @@ struct DashboardView: View {
                         .font(.custom("Josefin Sans", size: 16))
                     Text("Fields: \(dataManager.gpsLocations.first?.data.keys.sorted().joined(separator: ", ") ?? "none")")
                         .font(.custom("Josefin Sans", size: 13))
-                        .foregroundStyle(.black.opacity(0.7))
+                        .foregroundStyle(.black)
                         .textSelection(.enabled)
                 }
                 .multilineTextAlignment(.center)
@@ -185,7 +185,7 @@ struct DashboardView: View {
                         .font(.custom("Josefin Sans", size: 18))
                     Text(summary(points: points.count, total: dataManager.gpsLocations.count))
                         .font(.custom("Josefin Sans", size: 13))
-                        .foregroundStyle(.black.opacity(0.7))
+                        .foregroundStyle(.black)
 
                     LocationsMapView(points: points)
                         .id(selectedDate) // reframe the camera whenever a new day is chosen
