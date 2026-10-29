@@ -12,6 +12,17 @@ extension Color {
 struct DashboardView: View {
     let authManager: AuthManager
     @State private var dataManager = FirestoreDataManager()
+    @State private var isMapPresented = false
+    @State private var selectedSessionID: String?
+    @State private var isSessionSelectorExpanded = false
+
+    private var routeSessions: [GPSSession] {
+        dataManager.gpsSessions
+    }
+
+    private var selectedMapSession: GPSSession? {
+        routeSessions.first { $0.id == selectedSessionID } ?? routeSessions.first
+    }
 
     var body: some View {
         NavigationStack {
@@ -59,10 +70,58 @@ struct DashboardView: View {
             .navigationTitle("GPS Tracker")
             .profileToolbar(authManager: authManager)
         }
+#if os(macOS)
+        .sheet(isPresented: $isMapPresented) {
+            routeMapPresentation
+                .frame(width: 1000, height: 800)
+        }
+#else
+        .fullScreenCover(isPresented: $isMapPresented) {
+            routeMapPresentation
+        }
+#endif
         // Force light appearance so the title, list rows, and buttons render dark-on-light
         .environment(\.colorScheme, .light)
         .task {
             await dataManager.fetchData()
+        }
+    }
+
+    private func averageSpeedDescription(for session: GPSSession) -> String {
+        guard let averageSpeedMPH = session.averageSpeedMPH else {
+            return "unavailable"
+        }
+
+        return averageSpeedMPH < 1
+            ? String(format: "%.1f ft/min", averageSpeedMPH * 5280 / 60)
+            : String(format: "%.1f mph", averageSpeedMPH)
+    }
+
+    @ViewBuilder
+    private var routeMapPresentation: some View {
+        if let session = selectedMapSession {
+            NavigationStack {
+                LocationsMapView(points: session.points)
+                    .id(session.id)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .overlay(alignment: .topLeading) {
+                        Text("Session \(session.number) · \(session.points.count) locations")
+                            .font(.custom("Josefin Sans", size: 15))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(.regularMaterial, in: Capsule())
+                            .padding()
+                    }
+                    .navigationTitle(dataManager.selectedDate?.formatted(date: .complete, time: .omitted) ?? "Route Map")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                isMapPresented = false
+                            }
+                        }
+                    }
+            }
         }
     }
 
@@ -76,14 +135,14 @@ struct DashboardView: View {
                 HStack(alignment: .top, spacing: 24) {
                     calendarColumn
                         .frame(width: 380)
-                    resultsColumn(mapHeight: 560)
+                    resultsColumn
                         .frame(minWidth: 420)
                 }
 
                 VStack(spacing: 16) {
                     calendarColumn
                     Divider()
-                    resultsColumn(mapHeight: 420)
+                    resultsColumn
                 }
             }
             .padding()
@@ -97,6 +156,8 @@ struct DashboardView: View {
                 availableDays: dataManager.availableDays,
                 selectedDate: dataManager.selectedDate
             ) { date in
+                selectedSessionID = nil
+                isSessionSelectorExpanded = false
                 Task { await dataManager.selectDay(date) }
             }
 
@@ -108,33 +169,94 @@ struct DashboardView: View {
         }
     }
 
-    /// Total distance travelled on the chosen day, shown under the calendar.
+    /// Distance and speed for each session in the chosen day, shown under the calendar.
     @ViewBuilder
     private var routeSummary: some View {
-        let points = dataManager.gpsPoints
+        let sessions = routeSessions
 
         if dataManager.selectedDate != nil,
            !dataManager.isLoadingLocations,
            dataManager.locationsErrorMessage == nil,
-           points.count > 1 {
-            VStack(spacing: 4) {
+           !sessions.isEmpty {
+            let session = selectedMapSession ?? sessions[0]
+
+            VStack(spacing: 8) {
+                if sessions.count > 1 {
+                    Text("More than one session found. Each session is separated by a gap greater than 15 minutes.")
+                        .font(.custom("Josefin Sans", size: 14))
+                        .foregroundStyle(.black)
+                        .multilineTextAlignment(.center)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Button {
+                            isSessionSelectorExpanded.toggle()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Text("Session \(session.number)")
+                                    .font(.custom("Josefin Sans", size: 16))
+                                Image(systemName: isSessionSelectorExpanded ? "chevron.up" : "chevron.down")
+                                    .font(.system(size: 12, weight: .semibold))
+                            }
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.8))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
+
+                        if isSessionSelectorExpanded {
+                            VStack(alignment: .leading, spacing: 0) {
+                                ForEach(sessions) { option in
+                                    Button {
+                                        selectedSessionID = option.id
+                                        isSessionSelectorExpanded = false
+                                    } label: {
+                                        Text("Session \(option.number)")
+                                            .font(.custom("Josefin Sans", size: 16))
+                                            .foregroundStyle(.black)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 9)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.calendarDayBlue.opacity(0.25), lineWidth: 1)
+                            }
+                        }
+                    }
+                }
+
+                Text("Session \(session.number) · \(session.points.count) locations")
+                    .font(.custom("Josefin Sans", size: 14))
+                    .foregroundStyle(.black)
+
                 Text("Distance traveled")
                     .font(.custom("Josefin Sans", size: 13))
                     .foregroundStyle(.black)
 
-                Text(DistanceFormat.string(fromMeters: points.distanceMeters()))
+                Text(DistanceFormat.string(fromMeters: session.distanceMeters))
                     .font(.custom("Josefin Sans", size: 34))
                     .foregroundStyle(Color.calendarDayBlue)
 
-                // Shown so you can see how much GPS jitter the filter removed
-                Text("Moves under \(DistanceFormat.string(fromMeters: RouteFilter.minimumMoveMeters)) ignored. Raw GPS path: \(DistanceFormat.string(fromMeters: points.totalDistanceMeters))")
+                Text("Average speed: \(averageSpeedDescription(for: session))")
+                    .font(.custom("Josefin Sans", size: 16))
+                    .foregroundStyle(.black)
+
+                Text("Moves under \(DistanceFormat.string(fromMeters: RouteFilter.minimumMoveMeters)) ignored. Raw GPS path: \(DistanceFormat.string(fromMeters: session.rawDistanceMeters))")
                     .font(.custom("Josefin Sans", size: 15))
                     .foregroundStyle(.black)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
 
-                if let first = points.first?.time, let last = points.last?.time {
-                    Text("\(first.formatted(date: .omitted, time: .shortened)) to \(last.formatted(date: .omitted, time: .shortened))")
+                if let first = session.points.first?.time,
+                   let last = session.points.last?.time {
+                    Text("\(GPSDateFormat.time(first)) to \(GPSDateFormat.time(last))")
                         .font(.custom("Josefin Sans", size: 13))
                         .foregroundStyle(.black)
                 }
@@ -151,16 +273,16 @@ struct DashboardView: View {
         }
     }
 
-    private func resultsColumn(mapHeight: CGFloat) -> some View {
+    private var resultsColumn: some View {
         VStack(spacing: 8) {
-            locationsSection(mapHeight: mapHeight)
+            locationsSection
         }
         .frame(maxWidth: .infinity)
     }
 
     /// What happened for the chosen day: a prompt, a spinner, an error, or its map.
     @ViewBuilder
-    private func locationsSection(mapHeight: CGFloat) -> some View {
+    private var locationsSection: some View {
         if let selectedDate = dataManager.selectedDate {
             let title = selectedDate.formatted(date: .complete, time: .omitted)
             let points = dataManager.gpsPoints
@@ -192,15 +314,15 @@ struct DashboardView: View {
                         .font(.custom("Josefin Sans", size: 13))
                         .foregroundStyle(.black)
 
-                    LocationsMapView(points: points)
-                        .id(selectedDate) // reframe the camera whenever a new day is chosen
-                        .frame(height: mapHeight)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.calendarDayBlue, lineWidth: 1)
-                        )
-                        .shadow(color: Color.calendarDayBlue.opacity(0.25), radius: 4, x: 3, y: 3)
+                    Button {
+                        isMapPresented = true
+                    } label: {
+                        Label("Open route map", systemImage: "map")
+                            .font(.custom("Josefin Sans", size: 16))
+                            .foregroundStyle(.white)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.calendarDayBlue)
                 }
             }
         } else {

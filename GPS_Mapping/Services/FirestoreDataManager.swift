@@ -3,6 +3,16 @@ import CoreLocation
 import FirebaseAuth
 import FirebaseFirestore
 
+enum GPSDateFormat {
+    // Use the region so Eastern daylight-saving transitions are applied automatically.
+    private static let easternTimeZone = TimeZone(identifier: "America/New_York")!
+
+    static func time(_ date: Date) -> String {
+        date.addingTimeInterval(4 * 60 * 60)
+            .formatted(Date.FormatStyle(date: .omitted, time: .shortened, timeZone: easternTimeZone))
+    }
+}
+
 /// Converts between `unique_days` document IDs (formatted `YYYY_MM_DD`) and real dates.
 enum DayID {
     /// Gregorian calendar in the user's current time zone; every day is represented
@@ -70,7 +80,7 @@ struct FirestoreDocument: Identifiable {
 }
 
 /// One recorded GPS fix from a `gps_locations` document.
-struct GPSPoint: Identifiable {
+struct GPSPoint: Identifiable, Sendable {
     let id: String
     let coordinate: CLLocationCoordinate2D
     /// When the fix was recorded (the document's `dt` field), if present.
@@ -119,7 +129,7 @@ struct GPSPoint: Identifiable {
 
 extension GPSPoint {
     /// Straight-line distance to another point, in meters.
-    func distance(to other: GPSPoint) -> CLLocationDistance {
+    nonisolated func distance(to other: GPSPoint) -> CLLocationDistance {
         let from = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         let to = CLLocation(latitude: other.coordinate.latitude, longitude: other.coordinate.longitude)
         return from.distance(from: to)
@@ -133,20 +143,48 @@ enum RouteFilter {
     /// by roughly 5 to 30 m; this should be a little larger than that wander.
     /// Raise it if a parked tracker still shows distance; lower it if real, slow walks come
     /// out too short.
-    static let minimumMoveMeters: CLLocationDistance = 8
+    nonisolated static let minimumMoveMeters: CLLocationDistance = 8
+}
+
+struct GPSSession: Identifiable, Sendable {
+    nonisolated static let maximumPointGap: TimeInterval = 15 * 60
+
+    let number: Int
+    let points: [GPSPoint]
+    let id: String
+    let distanceMeters: CLLocationDistance
+    let rawDistanceMeters: CLLocationDistance
+    let averageSpeedMPH: Double?
+
+    nonisolated init(number: Int, points: [GPSPoint]) {
+        precondition(!points.isEmpty)
+        self.number = number
+        self.points = points
+        self.id = points[0].id
+        distanceMeters = points.distanceMeters()
+        rawDistanceMeters = points.totalDistanceMeters
+
+        if let first = points.first?.time,
+           let last = points.last?.time,
+           last > first {
+            averageSpeedMPH = distanceMeters / last.timeIntervalSince(first) * 2.2369362920544
+        } else {
+            averageSpeedMPH = nil
+        }
+    }
 }
 
 extension Array where Element == GPSPoint {
     /// Raw length of the route, in meters: the sum of the straight-line distances between each
     /// point and the next, in time order. GPS jitter inflates this when the tracker is still.
-    var totalDistanceMeters: CLLocationDistance {
+    nonisolated var totalDistanceMeters: CLLocationDistance {
         zip(self, dropFirst()).reduce(0) { total, pair in total + pair.0.distance(to: pair.1) }
     }
 
     /// Length of the route in meters, ignoring jitter: a point is only counted once it is at
     /// least `minimum` meters from the last point that was counted (the "anchor").
     /// Points that stay inside that radius, like a tracker wandering on a desk, add nothing.
-    func distanceMeters(ignoringMovesUnder minimum: CLLocationDistance = RouteFilter.minimumMoveMeters) -> CLLocationDistance {
+    nonisolated func distanceMeters(ignoringMovesUnder minimum: CLLocationDistance = RouteFilter.minimumMoveMeters) -> CLLocationDistance {
         guard var anchor = first else { return 0 }
         var total: CLLocationDistance = 0
         for point in dropFirst() {
@@ -157,6 +195,28 @@ extension Array where Element == GPSPoint {
             }
         }
         return total
+    }
+
+    /// Splits time-ordered points into sessions when consecutive fixes are over 15 minutes apart.
+    nonisolated func sessions() -> [GPSSession] {
+        guard let first else { return [] }
+
+        var groups: [[GPSPoint]] = []
+        var currentGroup = [first]
+        for point in dropFirst() {
+            let previous = currentGroup[currentGroup.count - 1]
+            if let previousTime = previous.time,
+               let currentTime = point.time,
+               currentTime.timeIntervalSince(previousTime) > GPSSession.maximumPointGap {
+                groups.append(currentGroup)
+                currentGroup = [point]
+            } else {
+                currentGroup.append(point)
+            }
+        }
+        groups.append(currentGroup)
+
+        return groups.enumerated().map { GPSSession(number: $0.offset + 1, points: $0.element) }
     }
 }
 
@@ -185,13 +245,10 @@ final class FirestoreDataManager {
     /// The day picked in the calendar, and the `gps_locations` documents recorded on it.
     var selectedDate: Date?
     var gpsLocations: [FirestoreDocument] = []
+    var gpsPoints: [GPSPoint] = []
+    var gpsSessions: [GPSSession] = []
     var isLoadingLocations = false
     var locationsErrorMessage: String?
-
-    /// The chosen day's locations that have a usable coordinate, in time order.
-    var gpsPoints: [GPSPoint] {
-        gpsLocations.compactMap(GPSPoint.init(document:))
-    }
 
     /// The dates of all fetched `unique_days` documents, oldest first.
     var availableDays: [Date] {
@@ -199,6 +256,7 @@ final class FirestoreDataManager {
     }
 
     private let db = Firestore.firestore()
+    private var selectionRequestID = 0
 
     func fetchData() async {
         // Reads require a signed-in user; who may read is enforced by Firestore security rules.
@@ -221,15 +279,21 @@ final class FirestoreDataManager {
     /// Selects a day and loads the `gps_locations` documents whose `dt` timestamp falls
     /// within that day (local midnight to the next local midnight).
     func selectDay(_ date: Date) async {
+        selectionRequestID += 1
+        let requestID = selectionRequestID
         selectedDate = date
         gpsLocations = []
+        gpsPoints = []
+        gpsSessions = []
         locationsErrorMessage = nil
         isLoadingLocations = true
 
         let calendar = DayID.calendar
         let start = calendar.startOfDay(for: date)
         guard let end = calendar.date(byAdding: .day, value: 1, to: start) else {
-            isLoadingLocations = false
+            if requestID == selectionRequestID {
+                isLoadingLocations = false
+            }
             return
         }
 
@@ -242,15 +306,26 @@ final class FirestoreDataManager {
                 .getDocuments()
 
             // Ignore this result if the user has already picked a different day.
-            guard selectedDate == date else { return }
+            guard requestID == selectionRequestID else { return }
 
             print("Firestore: 'gps_locations' returned \(snapshot.documents.count) document(s) for \(DayID.id(from: date))")
-            gpsLocations = snapshot.documents.map { FirestoreDocument(id: $0.documentID, data: $0.data()) }
+            let locations = snapshot.documents.map { FirestoreDocument(id: $0.documentID, data: $0.data()) }
+            let points = locations.compactMap(GPSPoint.init(document:))
+            let sessions = await Task.detached(priority: .userInitiated) {
+                points.sessions()
+            }.value
+
+            guard requestID == selectionRequestID else { return }
+            gpsLocations = locations
+            gpsPoints = points
+            gpsSessions = sessions
         } catch {
-            guard selectedDate == date else { return }
+            guard requestID == selectionRequestID else { return }
             locationsErrorMessage = error.localizedDescription
         }
-        isLoadingLocations = false
+        if requestID == selectionRequestID {
+            isLoadingLocations = false
+        }
     }
 
     /// Reads every document in a collection (the data is shared, not filtered per user).

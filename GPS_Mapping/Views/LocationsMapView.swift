@@ -41,7 +41,7 @@ struct LocationsMapView: View {
 
     private static func label(_ name: String, for point: GPSPoint) -> String {
         guard let time = point.time else { return name }
-        return "\(name) \(time.formatted(date: .omitted, time: .shortened))"
+        return "\(name) \(GPSDateFormat.time(time))"
     }
 
     /// Frames all the points with some margin, and never zooms in tighter than ~300 m.
