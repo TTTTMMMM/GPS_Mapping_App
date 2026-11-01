@@ -183,11 +183,6 @@ struct DashboardView: View {
 
             VStack(spacing: 8) {
                 if sessions.count > 1 {
-                    Text("More than one session found. Each session is separated by a gap greater than 15 minutes.")
-                        .font(.custom("Josefin Sans", size: 14))
-                        .foregroundStyle(.black)
-                        .multilineTextAlignment(.center)
-
                     VStack(alignment: .leading, spacing: 4) {
                         Button {
                             isSessionSelectorExpanded.toggle()
@@ -198,10 +193,10 @@ struct DashboardView: View {
                                 Image(systemName: isSessionSelectorExpanded ? "chevron.up" : "chevron.down")
                                     .font(.system(size: 12, weight: .semibold))
                             }
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.8))
+                            .background(Color.calendarDayBlue)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .buttonStyle(.plain)
@@ -226,7 +221,7 @@ struct DashboardView: View {
                                     } label: {
                                         Text("Session \(option.number)")
                                             .font(.custom("Josefin Sans", size: 16))
-                                            .foregroundStyle(.black)
+                                            .foregroundStyle(.white)
                                             .frame(maxWidth: .infinity, alignment: .leading)
                                             .padding(.horizontal, 12)
                                             .padding(.vertical, 9)
@@ -235,11 +230,11 @@ struct DashboardView: View {
                                 }
                             }
                             .frame(width: sessionSelectorWidth)
-                            .background(Color.white)
+                            .background(Color.calendarDayBlue)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .overlay {
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.calendarDayBlue.opacity(0.25), lineWidth: 1)
+                                    .stroke(Color.calendarDayBlue, lineWidth: 1)
                             }
                         }
                     }
@@ -321,19 +316,13 @@ struct DashboardView: View {
                 .multilineTextAlignment(.center)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(title)
-                        .font(.custom("Josefin Sans", size: 18))
-                    Text(summary(points: points.count, total: dataManager.gpsLocations.count))
-                        .font(.custom("Josefin Sans", size: 13))
-                        .foregroundStyle(.black)
-
                     Button {
                         isMapPresented = true
                     } label: {
                         Label("Open route map", systemImage: "map")
-                            .font(.custom("Josefin Sans", size: 16))
                             .foregroundStyle(.white)
                     }
+                    .font(.custom("Josefin Sans", size: 16))
                     .buttonStyle(.borderedProminent)
                     .tint(Color.calendarDayBlue)
                 }
@@ -344,8 +333,4 @@ struct DashboardView: View {
         }
     }
 
-    private func summary(points: Int, total: Int) -> String {
-        let base = "\(points) location\(points == 1 ? "" : "s") on the map"
-        return points < total ? "\(base) (\(total - points) without a usable coordinate)" : base
-    }
 }
