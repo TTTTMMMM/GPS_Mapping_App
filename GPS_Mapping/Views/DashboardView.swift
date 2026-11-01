@@ -15,6 +15,7 @@ struct DashboardView: View {
     @State private var isMapPresented = false
     @State private var selectedSessionID: String?
     @State private var isSessionSelectorExpanded = false
+    @State private var sessionSelectorWidth: CGFloat = 0
 
     private var routeSessions: [GPSSession] {
         dataManager.gpsSessions
@@ -204,6 +205,17 @@ struct DashboardView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .buttonStyle(.plain)
+                        .background {
+                            GeometryReader { geometry in
+                                Color.clear
+                                    .onAppear {
+                                        sessionSelectorWidth = geometry.size.width
+                                    }
+                                    .onChange(of: geometry.size.width) { _, width in
+                                        sessionSelectorWidth = width
+                                    }
+                            }
+                        }
 
                         if isSessionSelectorExpanded {
                             VStack(alignment: .leading, spacing: 0) {
@@ -222,6 +234,7 @@ struct DashboardView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
+                            .frame(width: sessionSelectorWidth)
                             .background(Color.white)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .overlay {

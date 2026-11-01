@@ -4,12 +4,10 @@ import FirebaseAuth
 import FirebaseFirestore
 
 enum GPSDateFormat {
-    // Use the region so Eastern daylight-saving transitions are applied automatically.
-    private static let easternTimeZone = TimeZone(identifier: "America/New_York")!
+    private static let displayTimeZone = TimeZone(secondsFromGMT: 0)!
 
     static func time(_ date: Date) -> String {
-        date.addingTimeInterval(4 * 60 * 60)
-            .formatted(Date.FormatStyle(date: .omitted, time: .shortened, timeZone: easternTimeZone))
+        date.formatted(Date.FormatStyle(date: .omitted, time: .shortened, timeZone: displayTimeZone))
     }
 }
 
