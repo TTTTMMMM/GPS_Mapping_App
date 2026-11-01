@@ -319,7 +319,7 @@ struct DashboardView: View {
                     Button {
                         isMapPresented = true
                     } label: {
-                        Label("Open route map", systemImage: "map")
+                        Label("Open Route Map", systemImage: "map")
                             .foregroundStyle(.white)
                     }
                     .font(.custom("Josefin Sans", size: 16))
