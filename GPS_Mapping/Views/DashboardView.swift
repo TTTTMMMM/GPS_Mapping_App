@@ -98,6 +98,14 @@ struct DashboardView: View {
             : String(format: "%.1f mph", averageSpeedMPH)
     }
 
+    private func sessionTimeRange(for session: GPSSession) -> String {
+        guard let first = session.points.first?.time,
+              let last = session.points.last?.time else {
+            return "time unavailable"
+        }
+        return "\(GPSDateFormat.time(first)) to \(GPSDateFormat.time(last))"
+    }
+
     @ViewBuilder
     private var routeMapPresentation: some View {
         if let session = selectedMapSession {
@@ -106,16 +114,27 @@ struct DashboardView: View {
                     .id(session.id)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay(alignment: .topLeading) {
-                        Text("Session \(session.number) · \(session.points.count) locations")
-                            .font(.custom("Josefin Sans", size: 15))
+                        Text("Session \(session.number) · \(session.points.count) locations, \(DistanceFormat.string(fromMeters: session.distanceMeters))")
+                            .font(.custom("Josefin Sans", size: 16))
                             .foregroundStyle(.black)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(.regularMaterial, in: Capsule())
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                             .padding()
+                            .offset(y: 25)
                     }
-                    .navigationTitle(dataManager.selectedDate?.formatted(date: .complete, time: .omitted) ?? "Route Map")
                     .toolbar {
+                        ToolbarItem(placement: .principal) {
+                            VStack(spacing: 2) {
+                                Text(dataManager.selectedDate?.formatted(date: .complete, time: .omitted) ?? "Route Map")
+                                    .font(.custom("Josefin Sans", size: 17))
+                                    .foregroundStyle(.black)
+                                Text(sessionTimeRange(for: session))
+                                    .font(.custom("Josefin Sans", size: 16))
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.black)
+                            }
+                        }
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Done") {
                                 isMapPresented = false
