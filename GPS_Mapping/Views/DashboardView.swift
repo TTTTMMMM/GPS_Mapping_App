@@ -267,7 +267,7 @@ struct DashboardView: View {
                     .foregroundStyle(Color.calendarDayBlue)
 
                 Text("Average speed: \(averageSpeedDescription(for: session))")
-                    .font(.custom("Josefin Sans", size: 16))
+                    .font(.custom("Josefin Sans", size: 19))
                     .foregroundStyle(.black)
 
             }
