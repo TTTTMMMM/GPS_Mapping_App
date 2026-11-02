@@ -68,7 +68,12 @@ struct DashboardView: View {
 #endif
             // Black text for readability on the light background
             .foregroundStyle(Color.calendarDayBlue)
-            .navigationTitle("GPS Tracker")
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("GPS Tracker")
+                        .font(.custom("Josefin Sans", size: 27))
+                }
+            }
             .profileToolbar(authManager: authManager)
         }
 #if os(macOS)
@@ -113,25 +118,18 @@ struct DashboardView: View {
                 LocationsMapView(points: session.points)
                     .id(session.id)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .overlay(alignment: .topLeading) {
-                        Text("Session \(session.number) · \(session.points.count) locations, \(DistanceFormat.string(fromMeters: session.distanceMeters))")
-                            .font(.custom("Josefin Sans", size: 16))
-                            .foregroundStyle(.black)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                            .padding()
-                            .offset(y: 25)
-                    }
                     .toolbar {
                         ToolbarItem(placement: .principal) {
                             VStack(spacing: 2) {
                                 Text(dataManager.selectedDate?.formatted(date: .complete, time: .omitted) ?? "Route Map")
-                                    .font(.custom("Josefin Sans", size: 17))
+                                    .font(.custom("Josefin Sans", size: 20))
                                     .foregroundStyle(.black)
                                 Text(sessionTimeRange(for: session))
-                                    .font(.custom("Josefin Sans", size: 16))
+                                    .font(.custom("Josefin Sans", size: 17))
                                     .fontWeight(.semibold)
+                                    .foregroundStyle(.black)
+                                Text("Session \(session.number) · \(session.points.count) locations, \(DistanceFormat.string(fromMeters: session.distanceMeters))")
+                                    .font(.custom("Josefin Sans", size: 15))
                                     .foregroundStyle(.black)
                             }
                         }
@@ -139,6 +137,7 @@ struct DashboardView: View {
                             Button("Done") {
                                 isMapPresented = false
                             }
+                            .font(.custom("Josefin Sans", size: 16))
                         }
                     }
             }
@@ -259,12 +258,8 @@ struct DashboardView: View {
                     }
                 }
 
-                Text("Session \(session.number) · \(session.points.count) locations")
+                Text(sessionTimeRange(for: session))
                     .font(.custom("Josefin Sans", size: 14))
-                    .foregroundStyle(.black)
-
-                Text("Distance traveled")
-                    .font(.custom("Josefin Sans", size: 13))
                     .foregroundStyle(.black)
 
                 Text(DistanceFormat.string(fromMeters: session.distanceMeters))
@@ -275,18 +270,6 @@ struct DashboardView: View {
                     .font(.custom("Josefin Sans", size: 16))
                     .foregroundStyle(.black)
 
-                Text("Moves under \(DistanceFormat.string(fromMeters: RouteFilter.minimumMoveMeters)) ignored. Raw GPS path: \(DistanceFormat.string(fromMeters: session.rawDistanceMeters))")
-                    .font(.custom("Josefin Sans", size: 15))
-                    .foregroundStyle(.black)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 8)
-
-                if let first = session.points.first?.time,
-                   let last = session.points.last?.time {
-                    Text("\(GPSDateFormat.time(first)) to \(GPSDateFormat.time(last))")
-                        .font(.custom("Josefin Sans", size: 13))
-                        .foregroundStyle(.black)
-                }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
